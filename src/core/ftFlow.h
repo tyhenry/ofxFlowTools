@@ -37,6 +37,7 @@ namespace flowTools {
 		virtual void setVisualizationToggleScalar(bool _value)	{ visualizationField.setToggleScalar(_value); }
 		
 		ofParameterGroup&	getParameters() 	{ return parameters; }
+		ftVisualizationField& getVisualizationField() { return visualizationField; }
 		
 	protected:
 		
