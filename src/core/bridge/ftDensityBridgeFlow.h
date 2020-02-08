@@ -15,19 +15,14 @@ namespace flowTools {
 	public:
 		ftDensityBridgeFlow() {
 			parameters.setName("density bridge");
-			parameters.add(saturation.set("saturation", 1, 0, 3));
+			parameters.add(saturation.set("saturation", 2.5, 0.0, 5.0));
 			//		parameters.add(hue.set("hue", 0, -.5, .5));
 		}
 		
-		void setup(int _flowWidth, int _flowHeight)	{ setup(_flowWidth, _flowHeight, _flowWidth, _flowHeight); }
+		void setup(int _simulationWidth, int _simulationHeight)	{ setup(_simulationWidth, _simulationHeight, _simulationWidth, _simulationHeight); }
 			
-		void setup(int _flowWidth, int _flowHeight, int _densityWidth, int _densityHeight){
-			ftBridgeFlow::allocate(_flowWidth, _flowHeight, _densityWidth, _densityHeight, GL_RGBA32F);
-			visibleFbo.allocate(_densityWidth, _densityHeight, GL_RGBA);
-			ftUtil::zero(visibleFbo);
-			
-			luminanceFbo.allocate(_densityWidth, _densityHeight, GL_R32F);  // should go to temperatureBridge
-			ftUtil::zero(luminanceFbo);
+		void setup(int _simulationWidth, int _simulationHeight, int _densityWidth, int _densityHeight){
+			allocate(_simulationWidth, _simulationHeight, GL_RG32F, _densityWidth, _densityHeight, GL_RGBA32F);
 		};
 		
 		void update(float _deltaTime) override {
@@ -36,24 +31,26 @@ namespace flowTools {
 			ofPushStyle();
 			ofEnableBlendMode(OF_BLENDMODE_DISABLED);
 			resetOutput();
-			densityBridgeShader.update(outputFbo, inputFbo.getTexture(), velocityTrailFbo.getTexture(), _deltaTime * speed.get() * .1);
+
+			float timeStep = _deltaTime * speed.get() * 10;
+			densityBridgeShader.update(outputFbo.get(), inputFbo.getTexture(), velocityTrailFbo.getTexture(), timeStep);
+
 			outputFbo.swap();
-			HSVShader.update(outputFbo, outputFbo.getBackTexture(), 0, saturation.get(), 1.0);
+			HSVShader.update(outputFbo.get(), outputFbo.getBackTexture(), 0, saturation.get(), 1.0);
 			
-			RGB2LuminanceShader.update(luminanceFbo, outputFbo.getTexture());
 			ofPopStyle();
 		}
 		
 		void reset() override {
 			ftBridgeFlow::reset();
-			
-			ftUtil::zero(luminanceFbo);
 			ftUtil::zero(visibleFbo);
 		}
 		
 		ofTexture&	getVisible() {
-			ftUtil::zero(visibleFbo);
+			ofPushStyle();
+			ofEnableBlendMode(OF_BLENDMODE_DISABLED);
 			multiplyShader.update(visibleFbo, outputFbo.getTexture(), ofGetFrameRate());
+			ofPopStyle();
 			return visibleFbo.getTexture();
 		}
 		
@@ -66,7 +63,6 @@ namespace flowTools {
 		void	setSaturation(float value)	{ saturation.set(value); }
 		
 		ofTexture& getDensity() 			{ return getOutput(); };
-		ofTexture& getLuminance()			{ return luminanceFbo.getTexture(); };
 		
 		float	getSaturation()				{ return saturation.get(); }
 		
@@ -75,13 +71,16 @@ namespace flowTools {
 //		ofParameter<float>		hue;
 		
 		ftDensityBridgeShader 	densityBridgeShader;
-		ftMultiplyForceShader	multiplyShader;
 		ofFbo					visibleFbo;
 		
 		ftHSVShader				HSVShader;
-		ftRGB2LuminanceShader	RGB2LuminanceShader;
 		
-		ofFbo					luminanceFbo;  // should go to temperatureBridge
+		void allocate(int _velocityWidth, int _velocityHeight, GLint _velocityInternalFormat, int _inOutputWidth, int _inOutputHeight, GLint _inOutputInternalFormat) override {
+			ftBridgeFlow::allocate(_velocityWidth, _velocityHeight, _velocityInternalFormat, _inOutputWidth, _inOutputHeight, _inOutputInternalFormat);
+			
+			visibleFbo.allocate(_inOutputWidth, _inOutputHeight, GL_RGBA);
+			ftUtil::zero(visibleFbo);
+		}
 	};
 }
 

@@ -1,5 +1,6 @@
 
 #pragma once
+
 #include "ofMain.h"
 #include "ftShader.h"
 
@@ -9,12 +10,10 @@ namespace flowTools {
 	public:
 		ftDecayShader(){
             bInitialized = 1;
-            if (ofIsGLProgrammableRenderer()) { glThree(); } else { glTwo(); }
-			
-            if (bInitialized)
-                ofLogVerbose("ftDecayShader initialized");
-			else
-				ofLogWarning("ftDecayShader failed to initialize");
+			if (ofIsGLProgrammableRenderer()) { glFour(); } else { glTwo(); }
+			string shaderName = "ftDecayShader";
+			if (bInitialized) { ofLogVerbose(shaderName + " initialized"); }
+			else { ofLogWarning(shaderName + " failed to initialize"); }
 		}
 		
 	protected:
@@ -33,14 +32,12 @@ namespace flowTools {
 									 }
 									 );
 			
-			bInitialized *= shader.setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
-			bInitialized *= shader.linkProgram();
-			
+			bInitialized *= setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
+			bInitialized *= linkProgram();
 		}
 		
-		void glThree() {
-			
-			fragmentShader = GLSL150(
+		void glFour() {
+			fragmentShader = GLSL410(
 									 uniform sampler2DRect tex0;
 									 uniform sampler2DRect tex1;
 									 uniform float decay;
@@ -57,23 +54,23 @@ namespace flowTools {
 									 }
 									 );
 			
-			bInitialized *= shader.setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
-			bInitialized *= shader.setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
-			bInitialized *= shader.bindDefaults();
-			bInitialized *= shader.linkProgram();
-			
+			bInitialized *= setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
+			bInitialized *= setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
+			bInitialized *= bindDefaults();
+			bInitialized *= linkProgram();
 		}
 		
 	public:
 		void update(ofFbo& _fbo, ofTexture& _backTex,  ofTexture& _srcTex, float _decay){
 			_fbo.begin();
-			shader.begin();
-			shader.setUniformTexture("tex0", _backTex, 0);
-			shader.setUniformTexture("tex1", _srcTex, 1);
-			shader.setUniform1f("decay", max(_decay, 0.0f));
+			begin();
+			setUniformTexture("tex0", _backTex, 0);
+			setUniformTexture("tex1", _srcTex, 1);
+			setUniform1f("decay", max(_decay, 0.0f));
 			renderFrame(_fbo.getWidth(), _fbo.getHeight());
-			shader.end();
+			end();
 			_fbo.end();
 		}
 	};
 }
+

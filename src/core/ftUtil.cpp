@@ -216,8 +216,8 @@ namespace flowTools {
 			default:
 				ofLogWarning("ftUtil") << "getNumChannelsFromInternalFormat: " << "flowtools does not use internalFormat " << ofToHex(_internalFormat);
 				break;
-				return 0;
 		}
+		return 0;
 	}
 	
 	// get number of channels in texture format
@@ -234,8 +234,8 @@ namespace flowTools {
 			default:
 				ofLogWarning("ftUtil") << "getNumChannelsFromFormat: " << "flowtools does not use format " << ofToHex(_format);
 				break;
-				return 0;
 		}
+		return 0;
 	}
 	
 		// get unsigned char format from number of channels;
@@ -288,9 +288,10 @@ namespace flowTools {
 				return false;
 				break;
 			default:
-				ofLogWarning("ftUtil") << "isFloat: " << "Internal format " << ofToHex(_internalFormat) << " not supported";
 				break;
 		}
+		ofLogWarning("ftUtil") << "isFloat: " << "Internal format " << ofToHex(_internalFormat) << " not supported";
+		return false;
 	}
 	
 	GLint ftUtil::getInternalFormatFromType(flowTools::ftFlowForceType _type) {
@@ -319,4 +320,59 @@ namespace flowTools {
 				break;
 		}
 	}
+	
+	int ftUtil::getNumChannelFromType(flowTools::ftFlowForceType _type) {
+		GLint internalFormat = getInternalFormatFromType(_type);
+		int numChannels = getNumChannelsFromInternalFormat(internalFormat);
+		return numChannels;
+	}
+
+	bool ftUtil::hasNan(ofTexture& _tex) {
+		bool nanFound = false;
+		GLint internalformat = getInternalFormat(_tex);
+		if (isFloat(internalformat)) {
+			ofFloatPixels pix;
+			ftUtil::toPixels(_tex, pix);
+			float* pixelData = pix.getData();
+			int dataSize = getNumChannelsFromInternalFormat(internalformat) * _tex.getWidth() * _tex.getHeight();
+
+			for (int p = 0; p < dataSize; p++) {
+				if (isnan(pixelData[p])) { nanFound = true; }
+			}
+		//	if (nanFound) { cout << "nan found" << endl; }
+		}
+		return nanFound;
+	}
+	
+	string ftUtil::getComponentName(flowTools::ftFlowForceType _type, int _index) {
+		vector<string> componentNames;
+		switch (_type) {
+			case FT_VELOCITY:
+			case FT_VELOCITY_NORM:
+				componentNames = {"x", "y"};
+				break;
+			case FT_VELOCITY_SPLIT:
+				componentNames = {"right", "down", "left", "up"};
+				break;
+			case FT_DENSITY:
+				componentNames = {"red", "green", "blue", "alpha"};
+				break;
+			case FT_PRESSURE:
+				componentNames = {"pressure"};
+				break;
+			case FT_TEMPERATURE:
+				componentNames = {"temperature"};
+				break;
+			default:
+				componentNames = {"unknown 0", "unknown 1", "unknown 2", "unknown 3"};
+				break;
+		}
+		
+		if (_index < componentNames.size()) {
+			return componentNames[_index];
+		}
+		return "unknown";
+		
+	}
+	
 }

@@ -4,41 +4,39 @@
 #include "ofMain.h"
 #include "ofxFlowTools.h"
 
-#include "ftDiffuseShader.h"
 #include "ftAdvectShader.h"
+#include "ftBuoyancyShader.h"
 #include "ftDivergenceShader.h"
-#include "ftJacobiShader.h"
-#include "ftSubstractGradientShader.h"
-#include "ftSmokeBuoyancyShader.h"
-#include "ftVorticityFirstPassShader.h"
-#include "ftVorticitySecondPassShader.h"
+#include "ftGradientShader.h"
+#include "ftJacobiDiffusionShader.h"
+#include "ftJacobiPressureShader.h"
+#include "ftObstacleOffsetShader.h"
+#include "ftVorticityCurlShader.h"
+#include "ftVorticityForceShader.h"
 
-#include "ftAddMultipliedShader.h"
-#include "ftClampLengthShader.h"
-
-#include "ftDensityVec2Multiplier.h"
-#include "ftDensityFloatMultiplier.h"
+#include "ftAddBooleanShader.h"
+#include "ftMultiplyForceShader.h"
 
 namespace flowTools {
 	class ftFluidFlow : public ftFlow{
 	public:
 		ftFluidFlow();
 		
-		void	setup(int _flowWidth, int _flowHeight)	{ setup(_flowWidth, _flowHeight, _flowWidth, _flowHeight); }
-		void	setup(int _flowWidth, int _flowHeight, int _densityWidth, int _densityHeight);
+		void	setup(int _simulationWidth, int _simulationHeight)	{ setup(_simulationWidth, _simulationHeight, _simulationWidth, _simulationHeight); }
+		void	setup(int _simulationWidth, int _simulationHeight, int _densityWidth, int _densityHeight);
 		void	update(float _deltaTime);
 		void	reset() override;
 		
 		void 	setFlow(ftFlowForceType _type, ofTexture& _tex);
 		void	setVelocity(ofTexture& _tex)	{ setInput(_tex); }
-		void	setDensity(ofTexture& _tex)		{ setOutput(_tex); }
+		void	setDensity(ofTexture& _tex)		{ set(outputFbo, _tex); }
 		void	setTemperature(ofTexture& _tex)	{ set(temperatureFbo, _tex); }
 		void	setPressure(ofTexture& _tex)	{ set(pressureFbo, _tex); }
-		void	setObstacle(ofTexture& _tex)	{ createEdgeImage(obstacleFbo); addObstacle(_tex); }
+		void	setObstacle(ofTexture& _tex);
 		
 		void 	addFlow(ftFlowForceType _type, ofTexture& _tex, float _strength  = 1.0);
 		void	addVelocity(ofTexture& _tex, float _strength  = 1.0)	{ addInput(_tex, _strength); }
-		void	addDensity(ofTexture& _tex, float _strength  = 1.0)		{ addOutput(_tex); }
+		void	addDensity(ofTexture& _tex, float _strength  = 1.0)		{ add(outputFbo, _tex); }
 		void	addTemperature(ofTexture& _tex, float _strength  = 1.0)	{ add(temperatureFbo, _tex); }
 		void	addPressure(ofTexture& _tex, float _strength  = 1.0)	{ add(pressureFbo, _tex); }
 		void	addObstacle(ofTexture& _tex);
@@ -48,21 +46,21 @@ namespace flowTools {
 		ofTexture&	getPressure()				{ return pressureFbo.getTexture(); }
 		ofTexture&	getTemperature()			{ return temperatureFbo.getTexture(); }
 		ofTexture&	getDivergence()				{ return divergenceFbo.getTexture(); }
-		ofTexture&	getObstacle()				{ return obstacleFbo.getTexture(); }
-		ofTexture&	getVorticityVelocity()		{ return vorticityVelocityFbo.getTexture(); }
-		ofTexture&	getVorticityConfinement()	{ return vorticityConfinementFbo.getTexture(); }
-		ofTexture&	getBuoyancy()				{ return smokeBuoyancyFbo.getTexture(); }
+		ofTexture&	getObstacle()				{ return obstacleOffsetFbo.getTexture(); }
+		ofTexture&	getObstacleEdges()			{ return obstacleFbo.getTexture(); }
+		ofTexture&	getVorticityCurl()			{ return vorticityCurlFbo.getTexture(); }
+		ofTexture&	getBuoyancy()				{ return buoyancyFbo.getTexture(); }
 		
-		void	drawVelocity(int _x, int _y, int _w, int _h)			{ drawInput (_x, _y, _w, _h); }
-		void	drawOutput(int _x, int _y, int _w, int _h) override		{ drawDensity (_x, _y, _w, _h); }
-		void	drawDensity(int _x, int _y, int _w, int _h)				{ outputFbo.getTexture().draw(_x, _y, _w, _h); }
-		void	drawPressure(int _x, int _y, int _w, int _h)			{ visualizationField.draw(pressureFbo.getTexture(), _x, _y, _w, _h); }
-		void	drawTemperature(int _x, int _y, int _w, int _h)			{ visualizationField.draw(temperatureFbo.getTexture(), _x, _y, _w, _h); }
-		void	drawDivergence(int _x, int _y, int _w, int _h)			{ visualizationField.draw(divergenceFbo.getTexture(), _x, _y, _w, _h); }
-		void	drawObstacle(int _x, int _y, int _w, int _h)			{ obstacleFbo.draw(_x, _y, _w, _h); }
-		void	drawVorticityVelocity(int _x, int _y, int _w, int _h)	{ visualizationField.draw(vorticityVelocityFbo.getTexture(), _x, _y, _w, _h); }
-		void	drawVorticityConfinement(int _x, int _y, int _w, int _h){ visualizationField.draw(vorticityConfinementFbo.getTexture(), _x, _y, _w, _h); }
-		void	drawBuoyancy(int _x, int _y, int _w, int _h)			{ visualizationField.draw(smokeBuoyancyFbo.getTexture(), _x, _y, _w, _h); }
+		void	drawVelocity(int _x, int _y, int _w, int _h)		{ drawInput (_x, _y, _w, _h); }
+		void	drawOutput(int _x, int _y, int _w, int _h) override	{ drawDensity (_x, _y, _w, _h); }
+		void	drawDensity(int _x, int _y, int _w, int _h)			{ outputFbo.getTexture().draw(_x, _y, _w, _h); }
+		void	drawPressure(int _x, int _y, int _w, int _h)		{ visualizationField.draw(pressureFbo.getTexture(), _x, _y, _w, _h); }
+		void	drawTemperature(int _x, int _y, int _w, int _h)		{ visualizationField.draw(temperatureFbo.getTexture(), _x, _y, _w, _h); }
+		void	drawDivergence(int _x, int _y, int _w, int _h)		{ visualizationField.draw(divergenceFbo.getTexture(), _x, _y, _w, _h); }
+		void	drawObstacle(int _x, int _y, int _w, int _h)		{ obstacleFbo.draw(_x, _y, _w, _h); }
+		void	drawObstacleOffset(int _x, int _y, int _w, int _h)	{ obstacleOffsetFbo.draw(_x, _y, _w, _h); }
+		void	drawVorticity(int _x, int _y, int _w, int _h)		{ visualizationField.draw(vorticityForceFbo.getTexture(), _x, _y, _w, _h); }
+		void	drawBuoyancy(int _x, int _y, int _w, int _h)		{ visualizationField.draw(buoyancyFbo.getTexture(), _x, _y, _w, _h); }
 			
 		int		getSimulationWidth()				{ return simulationWidth; }
 		int		getSimulationHeight()				{ return simulationHeight; }
@@ -70,65 +68,78 @@ namespace flowTools {
 		int		getDensityHeight()					{ return densityHeight; }
 		
 		float	getSpeed()							{ return speed.get(); }
-		float	getCellSize()						{ return cellSize.get(); }
-		float	getNumJacobiIterations()			{ return numJacobiIterations.get(); }
-		float	getViscosity()						{ return viscosity.get(); }
+		float	getDissipationVel()					{ return dissipationVel.get(); }
+		float	getDissipationDen()					{ return dissipationDen.get(); }
+		float	getDissipationTmp()					{ return dissipationTmp.get(); }
+		float	getDissipationPrs()					{ return dissipationPrs.get(); }
+		float	getViscosityVel()					{ return viscosityVel.get(); }
+		float	getViscosityDen()					{ return viscosityDen.get(); }
+		float	getViscosityTmp()					{ return viscosityTmp.get(); }
 		float	getVorticity()						{ return vorticity.get(); }
-		float	getDissipation()					{ return dissipation.get(); }
-		float	getSmokeSigma()						{ return smokeSigma.get(); }
-		float	getSmokeWeight()					{ return smokeWeight.get(); }
-		float	getAmbientTemperature()				{ return ambientTemperature.get(); }
-		glm::vec2 getGravity()						{ return gravity.get(); }
+		float	getBuoyancySigma()					{ return buoyancySigma.get(); }
+		float	getBuoyancyWeight()					{ return buoyancyWeight.get(); }
+		float	getBuoyancyAmbientTemperature()		{ return buoyancyAmbientTemperature.get(); }
 		
-		void	setSpeed(float value)				{speed.set(value);}
-		void	setCellSize(float value)			{cellSize.set(value);}
-		void	setNumJacobiIterations(float value)	{numJacobiIterations.set(value);}
-		void	setViscosity(float value)			{viscosity.set(value);}
-		void	setVorticity(float value)			{vorticity.set(value);}
-		void	setDissipation(float value)			{dissipation.set(value);}
-		void	setSmokeSigma(float value)			{smokeSigma.set(value);}
-		void	setSmokeWeight(float value)			{smokeWeight.set(value);}
-		void	setAmbientTemperature(float value)	{ambientTemperature.set(value);}
-		void	setGravity(glm::vec2 value)			{gravity.set(value);}
+		void	setSpeed(float value)				{ speed.set(value); }
+		void	setVorticity(float value)			{ vorticity.set(value); }
+		void	setDissipationVel(float value)		{ dissipationVel.set(value); }
+		void	setDissipationDen(float value)		{ dissipationDen.set(value); }
+		void	setDissipationTmp(float value)		{ dissipationTmp.set(value); }
+		float	setViscosityVel(float value)		{ viscosityVel.set(value); }
+		float	setViscosityDen(float value)		{ viscosityDen.set(value); }
+		float	setViscosityTmp(float value)		{ viscosityTmp.set(value); }
+		void	setBuoyancySigma(float value)		{ buoyancySigma.set(value); }
+		void	setBuoyancyWeight(float value)		{ buoyancyWeight.set(value); }
+		void	setBuoyancyAmbientTemperature(float value)	{ buoyancyAmbientTemperature.set(value); }
 		
 	protected:
-		ofParameter<float>			speed;
-		ofParameter<float>			cellSize;
-		ofParameter<int>			numJacobiIterations;
-		ofParameter<float>			viscosity;
-		ofParameter<float>			vorticity;
-		ofParameter<float>			dissipation;
-		ofParameterGroup			smokeBuoyancyParameters;
-		ofParameter<float>			smokeSigma;
-		ofParameter<float>			smokeWeight;
-		ofParameter<float>			ambientTemperature;
-		ofParameter<glm::vec2>		gravity;
-		ofParameterGroup			maxValues;
+		ofParameter<float>		speed;
+		ofParameter<float>		vorticity;
+		ofParameterGroup		dissipationParameters;
+		ofParameter<float>		dissipationVel;
+		ofParameter<float>		dissipationDen;
+		ofParameter<float>		dissipationTmp;
+		ofParameter<float>		dissipationPrs;
+		ofParameterGroup		viscosityParameters;
+		ofParameter<float>		viscosityVel;
+		ofParameter<float>		viscosityDen;
+		ofParameter<float>		viscosityTmp;
+		ofParameterGroup		buoyancyParameters;
+		ofParameter<float>		buoyancySigma;
+		ofParameter<float>		buoyancyWeight;
+		ofParameter<float>		buoyancyAmbientTemperature;
 		
-		ftDiffuseShader				diffuseShader;
 		ftAdvectShader				advectShader;
+		ftBuoyancyShader			buoyancyShader;
 		ftDivergenceShader			divergenceShader;
-		ftJacobiShader				jacobiShader;
-		ftSubstractGradient			substractGradientShader;
-		ftSmokeBuoyancyShader		smokeBuoyancyShader;
-		ftVorticityFirstPassShader	vorticityFirstPassShader;
-		ftVorticitySecondPassShader	vorticitySecondPassShader;
+		ftGradientShader			gradientShader;
+		ftJacobiDiffusionShader		jacobiDiffusionShader;
+		ftJacobiPressureShader		jacobiPressureShader;
+		ftObstacleOffsetShader		obstacleOffsetShader;
+		ftVorticityCurlShader		vorticityCurlShader;
+		ftVorticityForceShader		vorticityForceShader;
 		
-		ftClampLengthShader			clampLengthShader;
-		ftDensityFloatMultiplier	densityFloatMultiplierShader;
-		ftDensityVec2Multiplier		densityVec2MultiplierShader;
+		ftAddBooleanShader			addBooleanShader;
+		ftMultiplyForceShader		multiplyForceShader;
 		
-		ftPingPongFbo	temperatureFbo;
 		ftPingPongFbo	pressureFbo;
+		ftPingPongFbo	temperatureFbo;
+		ftPingPongFbo	obstacleFbo;
+		ofFbo			obstacleOffsetFbo;
 		ofFbo			divergenceFbo;
-		ofFbo			obstacleFbo;
-		ofFbo			vorticityVelocityFbo;
-		ofFbo			vorticityConfinementFbo;
-		ofFbo			smokeBuoyancyFbo;
+		ofFbo			vorticityCurlFbo;
+		ofFbo			vorticityForceFbo;
+		ofFbo			buoyancyFbo;
 		
-		int simulationWidth, simulationHeight, densityWidth, densityHeight;
+		int		simulationWidth, simulationHeight, densityWidth, densityHeight;
+		int		numJacobiIterationsProjection;
+		int		numJacobiIterationsDiffuse;
+		int		gridScale;
 		
-		void createEdgeImage(ofFbo& _Fbo, int _edgeWidth = 1, ofColor _backgroundColor = ofColor(255, 255, 255, 255), ofColor _edgeColor = ofColor(0, 0, 0, 255));
+		void	allocate(int _inputWidth, int _inputHeight, GLint _inputInternalFormat, int _outputWidth, int _outputHeight, GLint _outputInternalFormat) override ;
+		
+		void	initObstacle();
+		
 	};
 }
 

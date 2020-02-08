@@ -15,9 +15,9 @@ namespace flowTools {
 	public:
 		ftBridgeFlow() {
 			parameters.setName("bridge");
-			parameters.add(trailWeight.set("trail", .25, 0, .99));
-			parameters.add(blurRadius.set("blur", 2.5, 0, 10));
-			parameters.add(speed.set("speed", 50, .1, 100));
+			parameters.add(trailWeight.set("trail"	, 0.3, 0.0, 0.99));
+			parameters.add(blurRadius.set("blur"	, 3.0, 0.0, 10.0));
+			parameters.add(speed.set("speed"		, 0.3, 0.0, 1.0 ));
 		}
 		
 		void setVelocity(ofTexture &_inputTex) { set(velocityInputFbo, _inputTex);}
@@ -31,13 +31,13 @@ namespace flowTools {
 			ofEnableBlendMode(OF_BLENDMODE_DISABLED);
 			
 			velocityTrailFbo.swap();
-			bridgeShader.update(velocityTrailFbo, velocityTrailFbo.getBackTexture(), velocityInputFbo.getTexture(), trailWeight.get());
-			if (blurRadius.get() > 0) { blurShader.update(velocityTrailFbo, 1, blurRadius.get()); }
-			ftUtil::zero(velocityInputFbo);
+			bridgeShader.update(velocityTrailFbo.get(), velocityTrailFbo.getBackTexture(), velocityInputFbo.getTexture(), trailWeight.get());
+			if (blurRadius.get() > 0) { blurShader.update(velocityTrailFbo.get(), 1, blurRadius.get()); }
+//			ftUtil::zero(velocityInputFbo);
 			ofPopStyle();
 		}
 		
-		virtual void reset() { ftFlow::reset(); ftUtil::zero(velocityTrailFbo); }
+		virtual void reset() override { ftFlow::reset(); ftUtil::zero(velocityInputFbo); ftUtil::zero(velocityTrailFbo); }
 		
 		void	setTrailWeight(float value)		{ trailWeight.set(value); }
 		void	setBlurRadius(float value)		{ blurRadius.set(value); }
@@ -57,10 +57,10 @@ namespace flowTools {
 		ftGaussianBlurShader		blurShader;
 		ftMultiplyForceShader		multiplyShader;
 		
-		void allocate(int _velocityWidth, int _velocityHeight, int _inputWidth, int _inputHeight, int _internalFormat){
-			ftFlow::allocate(_inputWidth, _inputHeight, _internalFormat);
-			velocityInputFbo.allocate(_velocityWidth, _velocityHeight, GL_RG32F);
-			velocityTrailFbo.allocate(_velocityWidth, _velocityHeight, GL_RG32F);
+		virtual void allocate(int _velocityWidth, int _velocityHeight, GLint _velocityInternalFormat, int _inOutputWidth, int _inOutputHeight, GLint _inOutputInternalFormat) override{
+			ftFlow::allocate(_inOutputWidth, _inOutputHeight, _inOutputInternalFormat, _inOutputWidth, _inOutputHeight, _inOutputInternalFormat);
+			velocityInputFbo.allocate(_velocityWidth, _velocityHeight, _velocityInternalFormat);
+			velocityTrailFbo.allocate(_velocityWidth, _velocityHeight, _velocityInternalFormat);
 			ftUtil::zero(velocityInputFbo);
 			ftUtil::zero(velocityTrailFbo);
 		}

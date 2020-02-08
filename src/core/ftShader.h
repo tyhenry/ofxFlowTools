@@ -2,31 +2,26 @@
 
 #include "ofMain.h"
 
-#define GLSL120(shader)  "#version 120 \n #extension GL_ARB_texture_rectangle : enable \n" #shader
+#define GLSL120(shader)  "#version 120 \n #extension GL_ARB_texture_rectangle : enable \n #define TINY 0.000001 \n" #shader
 #define GLSL120PI(shader)  "#version 120 \n #extension GL_ARB_texture_rectangle : enable \n #define PI 3.1415926535897932 \n #define HALF_PI 1.5707963267948966 \n" #shader
 #define GLSL120GEO(shader)  "#version 120 \n #extension GL_ARB_texture_rectangle : enable \n #extension GL_EXT_geometry_shader4: enable \n" #shader
-#define GLSL150(shader)  "#version 150 \n" #shader
-#define GLSL150PI(shader)  "#version 150 \n #define PI 3.1415926535897932 \n #define HALF_PI 1.5707963267948966 \n" #shader
+#define GLSL410(shader)  "#version 410 \n #define TINY 0.000001 \n" #shader
+#define GLSL410PI(shader)  "#version 410 \n #define PI 3.1415926535897932 \n #define HALF_PI 1.5707963267948966 \n" #shader
 
 namespace flowTools {
 	
 	class ftShader : public ofShader{
 	public:
 		ftShader() {
-			bInitialized = false;
-			
-			if (ofIsGLProgrammableRenderer()) { glThree(); } else { glTwo(); }
-			
+			bInitialized = 0;
+			if (ofIsGLProgrammableRenderer()) { initGlFour(); } else { initGlTwo(); }
 			quad.getVertices().resize(4);
 			quad.getTexCoords().resize(4);
 			quad.setMode(OF_PRIMITIVE_TRIANGLE_FAN);
 		}
 		
-//		ofShader& getShader()	{ return shader; }
-		
 	protected:
-		void glTwo()  {
-			
+		void initGlTwo()  {
 			vertexShader = GLSL120(
 								   void main() {
 									   gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;
@@ -43,8 +38,8 @@ namespace flowTools {
 									 );
 		}
 		
-		void glThree() {
-			vertexShader = GLSL150(
+		void initGlFour() {
+			vertexShader = GLSL410(
 								   uniform mat4 modelViewProjectionMatrix;
 								   uniform mat4 textureMatrix;
 								   
@@ -63,7 +58,7 @@ namespace flowTools {
 								   }
 								   );
 			
-			fragmentShader = GLSL150(
+			fragmentShader = GLSL410(
 									 out vec4 fragColor;
 									 
 									 void main()
@@ -72,8 +67,6 @@ namespace flowTools {
 									 }
 									 );
 		}
-		
-		~ftShader() {shader.unload();};
 		
 	protected:
 		
@@ -97,10 +90,9 @@ namespace flowTools {
 		}
 		
 		ofMesh		quad;
-		ofShader	shader;
 		string		fragmentShader;
 		string		vertexShader;
-		bool		bInitialized;
+		int			bInitialized;
 	};
 	
 }

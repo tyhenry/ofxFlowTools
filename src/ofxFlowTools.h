@@ -38,11 +38,14 @@
 #include "ftOpticalFlow.h"
 #include "ftVelocityBridgeFlow.h"
 #include "ftDensityBridgeFlow.h"
+#include "ftTemperatureBridgeFlow.h"
+#include "ftCombinedBridgeFlow.h"
 #include "ftFluidFlow.h"
 
 // EXTENTION
 #include "ftMouseFlow.h"
 #include "ftParticleFlow.h"
 #include "ftSplitVelocityFlow.h"
+#include "ftPixelFlow.h"
 #include "ftAverageFlow.h"
 

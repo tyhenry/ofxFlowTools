@@ -9,31 +9,30 @@ void ofApp::setup(){
 	densityWidth = 1280;
 	densityHeight = 720;
 	// process all but the density on 16th resolution
-	flowWidth = densityWidth / 4;
-	flowHeight = densityHeight / 4;
+	simulationWidth = densityWidth / 2;
+	simulationHeight = densityHeight / 2;
 	windowWidth = ofGetWindowWidth();
 	windowHeight = ofGetWindowHeight();
 	
-	opticalFlow.setup(flowWidth, flowHeight);
-	velocityBridgeFlow.setup(flowWidth, flowHeight);
-	densityBridgeFlow.setup(flowWidth, flowHeight, densityWidth, densityHeight);
-	fluidFlow.setup(flowWidth, flowHeight, densityWidth, densityHeight);
-	particleFlow.setup(flowWidth, flowHeight, densityWidth, densityHeight);
+	opticalFlow.setup(simulationWidth, simulationHeight);
+	velocityBridgeFlow.setup(simulationWidth, simulationHeight);
+	densityBridgeFlow.setup(simulationWidth, simulationHeight, densityWidth, densityHeight);
+	temperatureBridgeFlow.setup(simulationWidth, simulationHeight);
+	fluidFlow.setup(simulationWidth, simulationHeight, densityWidth, densityHeight);
+	particleFlow.setup(simulationWidth, simulationHeight, densityWidth, densityHeight);
 	densityMouseFlow.setup(densityWidth, densityHeight, FT_DENSITY);
-	velocityMouseFlow.setup(flowWidth, flowHeight, FT_VELOCITY);
-	averageFlow.setup(32, 32, FT_VELOCITY);
-	averageFlow.setRoi(.2, .2, .6, .6);
+	velocityMouseFlow.setup(simulationWidth, simulationHeight, FT_VELOCITY);
 	
 	flows.push_back(&opticalFlow);
 	flows.push_back(&velocityBridgeFlow);
 	flows.push_back(&densityBridgeFlow);
+	flows.push_back(&temperatureBridgeFlow);
 	flows.push_back(&fluidFlow);
 	flows.push_back(&particleFlow);
 	flows.push_back(&densityMouseFlow);
 	flows.push_back(&velocityMouseFlow);
-	flows.push_back(&averageFlow);
 	
-	for (auto flow : flows) { flow->setVisualizationFieldSize(glm::vec2(flowWidth / 2, flowHeight / 2)); }
+	for (auto flow : flows) { flow->setVisualizationFieldSize(glm::vec2(simulationWidth / 2, simulationHeight / 2)); }
 	
 	mouseFlows.push_back(&densityMouseFlow);
 	mouseFlows.push_back(&velocityMouseFlow);
@@ -65,7 +64,6 @@ void ofApp::setupGui() {
 	gui.add(toggleCameraDraw.set("draw camera (C)", true));
 	gui.add(toggleMouseDraw.set("draw mouse (M)", true));
 	gui.add(toggleParticleDraw.set("draw particles (P)", true));
-	gui.add(toggleAverageDraw.set("draw average (A)", true));
 	toggleParticleDraw.addListener(this, &ofApp::toggleParticleDrawListener);
 	gui.add(toggleReset.set("reset (R)", false));
 	toggleReset.addListener(this, &ofApp::toggleResetListener);
@@ -142,25 +140,24 @@ void ofApp::update(){
 	densityBridgeFlow.setDensity(cameraFbo.getTexture());
 	densityBridgeFlow.setVelocity(opticalFlow.getVelocity());
 	densityBridgeFlow.update(dt);
+	temperatureBridgeFlow.setDensity(cameraFbo.getTexture());
+	temperatureBridgeFlow.setVelocity(opticalFlow.getVelocity());
+	temperatureBridgeFlow.update(dt);
 	
 	fluidFlow.addVelocity(velocityBridgeFlow.getVelocity());
 	fluidFlow.addDensity(densityBridgeFlow.getDensity());
+	fluidFlow.addTemperature(temperatureBridgeFlow.getTemperature());
 	for (auto flow: mouseFlows) { if (flow->didChange()) { fluidFlow.addFlow(flow->getType(), flow->getTexture()); } }
 	fluidFlow.update(dt);
 	
 	if (toggleParticleDraw) {
 		particleFlow.setSpeed(fluidFlow.getSpeed());
-		particleFlow.setCellSize(fluidFlow.getCellSize());
 		particleFlow.setFlowVelocity(opticalFlow.getVelocity());
 		for (auto flow: mouseFlows) if (flow->didChange() && flow->getType() == FT_VELOCITY) { particleFlow.addFlowVelocity(flow->getTexture()); }
 		particleFlow.setFluidVelocity(fluidFlow.getVelocity());
 		particleFlow.setObstacle(fluidFlow.getObstacle());
 		particleFlow.update(dt);
 	}
-	
-	averageFlow.setInput(opticalFlow.getVelocity());
-	for (auto flow: mouseFlows) { if (flow->didChange() && flow->getType() == FT_VELOCITY) { averageFlow.addInput(flow->getTexture()); } }
-	averageFlow.update();
 }
 
 //--------------------------------------------------------------
@@ -181,11 +178,12 @@ void ofApp::draw(){
 		case FLOW_VEL:		opticalFlow.draw(0, 0, windowWidth, windowHeight); break;
 		case BRIDGE_VEL:	velocityBridgeFlow.draw(0, 0, windowWidth, windowHeight); break;
 		case BRIDGE_DEN:	densityBridgeFlow.draw(0, 0, windowWidth, windowHeight); break;
-		case BRIDGE_TMP:	break;
+		case BRIDGE_TMP:	temperatureBridgeFlow.draw(0, 0, windowWidth, windowHeight); break;
 		case BRIDGE_PRS:	break;
 		case OBSTACLE:		fluidFlow.drawObstacle(0, 0, windowWidth, windowHeight); break;
+		case OBST_EDGE:		fluidFlow.drawObstacleOffset(0, 0, windowWidth, windowHeight); break;
 		case FLUID_BUOY:	fluidFlow.drawBuoyancy(0, 0, windowWidth, windowHeight); break;
-		case FLUID_VORT:	fluidFlow.drawVorticityVelocity(0, 0, windowWidth, windowHeight); break;
+		case FLUID_VORT:	fluidFlow.drawVorticity(0, 0, windowWidth, windowHeight); break;
 		case FLUID_DIVE:	fluidFlow.drawDivergence(0, 0, windowWidth, windowHeight); break;
 		case FLUID_TMP:		fluidFlow.drawTemperature(0, 0, windowWidth, windowHeight); break;
 		case FLUID_PRS:		fluidFlow.drawPressure(0, 0, windowWidth, windowHeight); break;
@@ -207,11 +205,6 @@ void ofApp::draw(){
 	
 	ofEnableBlendMode(OF_BLENDMODE_SUBTRACT);
 	flowToolsLogo.draw(0, 0, windowWidth, windowHeight);
-	
-	if (toggleAverageDraw) {
-		ofEnableBlendMode(OF_BLENDMODE_ALPHA);
-		averageFlow.draw(0, 0, windowWidth, windowHeight);
-	}
 	
 	if (toggleGuiDraw) {
 		ofEnableBlendMode(OF_BLENDMODE_ALPHA);
@@ -267,7 +260,6 @@ void ofApp::keyPressed(int key){
 		case 'M': toggleMouseDraw.set(!toggleMouseDraw.get()); break;
 		case 'R': toggleReset.set(!toggleReset.get()); break;
 		case 'P': toggleParticleDraw.set(!toggleParticleDraw.get()); break;
-		case 'A': toggleAverageDraw.set(!toggleAverageDraw.get()); break;
 			break;
 	}
 }

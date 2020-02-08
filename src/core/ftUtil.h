@@ -15,7 +15,7 @@ namespace flowTools {
 		FT_PRESSURE,		// 1 channel, float
 		FT_OBSTACLE,		// 1 channel, char
 		FT_VELOCITY_NORM,	// 2 channel, float, normalized to range -1...1
-		FT_VELOCITY_SPLIT,	// 4 channel, float >=0, right, down, left, up
+		FT_VELOCITY_SPLIT	// 4 channel, float >=0, right, down, left, up
 	};
 	
 	const vector<string> ftFlowForceNames{"none", "input", "density", "velocity", "temperature", "pressure", "obstacle", "normalized velocity", "split velocity"};
@@ -23,9 +23,11 @@ namespace flowTools {
 	class ftUtil {
 	public:
 		static void zero(ofFbo& _fbo) { _fbo.begin(); ofClear(0,0,0,0); _fbo.end(); }
-		static void zero(ftPingPongFbo &_fbo) { _fbo.begin(); ofClear(0,0,0,0); _fbo.end(); _fbo.swap(); _fbo.begin(); ofClear(0,0,0,0); _fbo.end();  }
+//		static void zero(ftPingPongFbo &_fbo) { _fbo.begin(); ofClear(0,0,0,0); _fbo.end(); _fbo.swap(); _fbo.begin(); ofClear(0,0,0,0); _fbo.end(); }
+		static void zero(ftPingPongFbo &_fbo) { _fbo.begin(); ofClear(0,0,0,0); _fbo.end(); }
 		static void one(ofFbo& _fbo) { _fbo.begin(); ofClear(255,255,255,255); _fbo.end(); }
-		static void one(ftPingPongFbo &_fbo) { _fbo.begin(); ofClear(255,255,255,255); _fbo.end(); _fbo.swap(); _fbo.begin(); ofClear(255,255,255,255); _fbo.end();  }
+//		static void one(ftPingPongFbo &_fbo) { _fbo.begin(); ofClear(255,255,255,255); _fbo.end(); _fbo.swap(); _fbo.begin(); ofClear(255,255,255,255); _fbo.end(); }
+		static void one(ftPingPongFbo &_fbo) { _fbo.begin(); ofClear(255,255,255,255); _fbo.end(); }
 		
 //		// draw texture in fbo using dimensions of texture
 //		static void draw(ofFbo& _dst, ofFbo& _src) { draw(_dst, _src.getTexture()); };
@@ -82,8 +84,17 @@ namespace flowTools {
 		// get if internalFormat is a float;
 		static bool isFloat(GLint _format);
 		
-		// get internatFormat from ftFlowForceType;
+		// get internalFormat from ftFlowForceType;
 		static GLint getInternalFormatFromType(ftFlowForceType _type);
+		
+		// get numChannels from ftFlowForceType;
+		static int getNumChannelFromType(ftFlowForceType _type);
+
+		// returns one if texture has pixels with a value of Nan;
+		static bool hasNan(ofFbo& _fbo) { return hasNan(_fbo.getTexture()); }
+		static bool hasNan(ofTexture& _tex);
+		
+		static string getComponentName(ftFlowForceType _type, int _index);
 		
 	protected:
 	};

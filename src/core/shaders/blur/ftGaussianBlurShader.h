@@ -2,8 +2,6 @@
 #pragma once
 
 #include "ofMain.h"
-#include "ofxFlowTools.h"
-
 #include "ftShader.h"
 
 namespace flowTools {
@@ -12,12 +10,10 @@ namespace flowTools {
 	public:
 		ftGaussianBlurShader(){
             bInitialized = 1;
-            if (ofIsGLProgrammableRenderer()) { glThree(); } else { glTwo(); }
-			
-            if (bInitialized)
-                ofLogVerbose("ftGaussianBlurShader initialized");
-			else
-				ofLogWarning("ftGaussianBlurShader failed to initialize");
+			if (ofIsGLProgrammableRenderer()) { glFour(); } else { glTwo(); }
+			string shaderName = "ftGaussianBlurShader";
+			if (bInitialized) { ofLogVerbose(shaderName + " initialized"); }
+			else { ofLogWarning(shaderName + " failed to initialize"); }
 		}
 		
 	protected:
@@ -47,7 +43,7 @@ namespace flowTools {
 															  gl_FragColor = color;
 														  }
 														  );
-			blurShader[0].unload();
+			
 			bInitialized *= blurShader[0].setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentHorizontalBlurShader);
 			bInitialized *= blurShader[0].linkProgram();
 			
@@ -76,15 +72,13 @@ namespace flowTools {
 															gl_FragColor = color;
 														}
 														);
-			blurShader[1].unload();
+			
 			bInitialized *= blurShader[1].setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentVerticalBlurShader);
 			bInitialized *= blurShader[1].linkProgram();
-
-			
 		}
 		
-		void glThree() {
-			string fragmentHorizontalBlurShader = GLSL150(
+		void glFour() {
+			string fragmentHorizontalBlurShader = GLSL410(
 														  uniform sampler2DRect backbuffer;
 														  uniform float radius;
 														  
@@ -112,13 +106,13 @@ namespace flowTools {
 															  fragColor = color;
 														  }
 														  );
-			blurShader[0].unload();
+			
 			bInitialized *= blurShader[0].setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
 			bInitialized *= blurShader[0].setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentHorizontalBlurShader);
 			bInitialized *= blurShader[0].bindDefaults();
 			bInitialized *= blurShader[0].linkProgram();
 			
-			string fragmentVerticalBlurShader = GLSL150(
+			string fragmentVerticalBlurShader = GLSL410(
 														uniform sampler2DRect backbuffer;
 														uniform float radius;
 														
@@ -146,7 +140,7 @@ namespace flowTools {
 															fragColor = color;
 														}
 														);
-			blurShader[1].unload();
+			
 			bInitialized *= blurShader[1].setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
 			bInitialized *= blurShader[1].setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentVerticalBlurShader);
 			bInitialized *= blurShader[1].bindDefaults();
@@ -154,16 +148,15 @@ namespace flowTools {
 		}
 		
 	public:
-	
 		void update(ofFbo& _fbo, int _passes, int _radius){
 			if (pingPong.getWidth() != _fbo.getWidth() ||
 				pingPong.getHeight() != _fbo.getHeight() ||
-				ftUtil::getInternalFormat(pingPong) != ftUtil::getInternalFormat(_fbo)) {
+				ftUtil::getInternalFormat(pingPong.get()) != ftUtil::getInternalFormat(_fbo)) {
 				allocate(_fbo.getWidth(),  _fbo.getHeight(), ftUtil::getInternalFormat(_fbo) );
 			}
 			
 			ftUtil::zero(pingPong);
-			ftUtil::stretch(pingPong, _fbo);
+			ftUtil::stretch(pingPong.get(), _fbo);
 	
 			for(int i = 0; i < _passes; i++) {
 				for(int j = 0; j < 2; j++) {
@@ -182,9 +175,7 @@ namespace flowTools {
 			ftUtil::stretch(_fbo, pingPong.getTexture());
 		}
 		
-		ofParameterGroup	parameters;
 	protected:
-		
 		void allocate(int _width, int _height, int _internalFormat = GL_RGBA){
 			pingPong.allocate( _width, _height, _internalFormat);
 			ftUtil::zero(pingPong);

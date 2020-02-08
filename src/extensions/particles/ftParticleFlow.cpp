@@ -36,8 +36,9 @@ namespace flowTools {
 	
 	ftParticleFlow::ftParticleFlow(){
 		parameters.setName("particles");
-		parameters.add(speed.set("speed", 20, 0, 100));
-		parameters.add(cellSize.set("cell size", 1.25, 0.0, 2.0));
+		parameters.add(speed.set("speed", .3, 0, 1));
+		cellSize.set("cell size", 1, 0.0, 2.0);
+//		parameters.add(cellSize.set("cell size", 1, 0.0, 2.0));
 		parameters.add(birthChance.set("birth chance", 0.5, 0, 1));
 		parameters.add(birthVelocityChance.set("birth velocity chance", 0.5, 0, 1));
 		parameters.add(lifeSpan.set("lifespan", 5, 0, 10));
@@ -54,6 +55,7 @@ namespace flowTools {
 		numParticlesX = _numParticlesX;
 		numParticlesY = _numParticlesY;
 		numParticles = (numParticlesX * numParticlesY);
+		simulationWidth = _simulationWidth;
 		
 		ofPushStyle();
 		ofEnableBlendMode(OF_BLENDMODE_DISABLED);  // Why?
@@ -96,14 +98,14 @@ namespace flowTools {
 	}
 	
 	void ftParticleFlow::update(float _deltaTime) {
-		float timeStep = _deltaTime * speed.get();
+		float timeStep = _deltaTime * speed.get() * 100;
 		
 		ofPushStyle();
 		ofEnableBlendMode(OF_BLENDMODE_DISABLED);
 		
 		
 		particleAgeLifespanMassSizeFbo.swap();
-		ALMSParticleShader.update(particleAgeLifespanMassSizeFbo,
+		ALMSParticleShader.update(particleAgeLifespanMassSizeFbo.get(),
 								  particleAgeLifespanMassSizeFbo.getBackTexture(),
 								  particlePositionFbo.getTexture(),
 								  flowVelocityFbo.getTexture(),
@@ -117,7 +119,7 @@ namespace flowTools {
 								  size.get(), sizeSpread.get());
 		
 		particlePositionFbo.swap();
-		moveParticleShader.update(particlePositionFbo,
+		moveParticleShader.update(particlePositionFbo.get(),
 								  particlePositionFbo.getBackTexture(),
 								  particleAgeLifespanMassSizeFbo.getTexture(),
 								  inputFbo.getTexture(),

@@ -26,11 +26,15 @@ namespace flowTools {
 		visualizationField.setup(outputWidth, outputHeight);
 	}
 	
+	void ftFlow::resize(int _inputWidth, int _inputHeight, int _outputWidth, int _outputHeight) {
+		allocate(_inputWidth, _inputHeight, inputInternalFormat, _outputWidth, _outputHeight, outputInternalFormat);
+	}
+	
 	void ftFlow::add(ftPingPongFbo &_dstFbo, ofTexture &_srcTex, float _strength) {
 		ofPushStyle();
 		ofEnableBlendMode(OF_BLENDMODE_DISABLED);
 		_dstFbo.swap();
-		addMultipliedShader.update(_dstFbo, _dstFbo.getBackTexture(), _srcTex, 1.0, _strength);
+		addMultipliedShader.update(_dstFbo.get(), _dstFbo.getBackTexture(), _srcTex, 1.0, _strength);
 		ofPopStyle();
 	}
 	
@@ -38,7 +42,7 @@ namespace flowTools {
 		ofPushStyle();
 		ofEnableBlendMode(OF_BLENDMODE_DISABLED);
 		ftUtil::zero(_dstFbo);
-		ftUtil::stretch(_dstFbo, _srcTex);
+		ftUtil::stretch(_dstFbo.get(), _srcTex);
 		ofPopStyle();
 	}
 };

@@ -4,23 +4,16 @@
 #include "ofMain.h"
 #include "ftShader.h"
 
-
 namespace flowTools {
 	
 	class ftEaseShader : public ftShader {
 	public:
 		ftEaseShader() {
-			bInitialized = 1;
-			
-			if (ofGetGLProgrammableRenderer())
-			glThree();
-			else
-			glTwo();
-			
-			if (bInitialized)
-			ofLogNotice("ftEaseShader initialized");
-			else
-			ofLogWarning("ftEaseShader failed to initialize");
+            bInitialized = 1;
+			if (ofIsGLProgrammableRenderer()) { glFour(); } else { glTwo(); }
+			string shaderName = "ftEaseShader";
+			if (bInitialized) { ofLogVerbose(shaderName + " initialized"); }
+			else { ofLogWarning(shaderName + " failed to initialize"); }
 		}
 		
 	protected:
@@ -39,12 +32,12 @@ namespace flowTools {
 								  
 								  );
 			
-			bInitialized *= shader.setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
-			bInitialized *= shader.linkProgram();
+			bInitialized *= setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
+			bInitialized *= linkProgram();
 		}
 		
-		void glThree() {
-			fragmentShader = GLSL150(
+		void glFour() {
+			fragmentShader = GLSL410(
 									 uniform sampler2DRect RedTexture;
 									 uniform vec2	Scale;
 									 
@@ -110,21 +103,20 @@ namespace flowTools {
 								  }
 								  );
 			
-			bInitialized *= shader.setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
-			bInitialized *= shader.setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
-			bInitialized *= shader.bindDefaults();
-			bInitialized *= shader.linkProgram();
+			bInitialized *= setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
+			bInitialized *= setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
+			bInitialized *= bindDefaults();
+			bInitialized *= linkProgram();
 		}
 		
-	public:
-		
-		void update(ofFbo& _fbo, ofTexture& _redTexture){
+    public:
+        void update(ofFbo& _fbo, ofTexture& _redTexture){
 			_fbo.begin();
-			shader.begin();
-			shader.setUniformTexture("RedTexture", _redTexture, 0);
-			shader.setUniform2f("Scale", _redTexture.getWidth() / _fbo.getWidth(), _redTexture.getHeight()/ _fbo.getHeight());
+			begin();
+			setUniformTexture("RedTexture", _redTexture, 0);
+			setUniform2f("Scale", _redTexture.getWidth() / _fbo.getWidth(), _redTexture.getHeight()/ _fbo.getHeight());
 			renderFrame(_fbo.getWidth(), _fbo.getHeight());
-			shader.end();
+			end();
 			_fbo.end();
 		}
 	};

@@ -15,7 +15,7 @@ namespace flowTools {
 		}
 		
 		void setup(int _width, int _height){
-			ftBridgeFlow::allocate(_width, _height, _width, _height, GL_RG32F);
+			ftBridgeFlow::allocate(_width, _height, GL_RG32F, _width, _height, GL_RG32F);
 		};
 		
 		void update(float _deltaTime) override {
@@ -24,7 +24,10 @@ namespace flowTools {
 			ofPushStyle();
 			ofEnableBlendMode(OF_BLENDMODE_DISABLED);
 			resetOutput();
-			multiplyShader.update(outputFbo, velocityTrailFbo.getTexture(), speed.get() * _deltaTime );
+			
+			float timeStep = _deltaTime * speed.get() * 200;
+			multiplyShader.update(outputFbo.get(), velocityTrailFbo.getTexture(), timeStep);
+
 			ofPopStyle();
 		}
 		

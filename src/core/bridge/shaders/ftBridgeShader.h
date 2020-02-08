@@ -1,21 +1,19 @@
 
 #pragma once
+
 #include "ofMain.h"
 #include "ftShader.h"
 
 namespace flowTools {
 	
-	// normalized trail shader
 	class ftBridgeShader : public ftShader {
 	public:
 		ftBridgeShader(){
-            bInitialized = 1;
-            if (ofIsGLProgrammableRenderer()) { glThree(); } else { glTwo(); }
-			
-			if (bInitialized)
-				ofLogVerbose("ftVelocityBridgeShader initialized");
-			else
-				ofLogWarning("ftVelocityBridgeShader failed to initialize");
+			bInitialized = 1;
+			if (ofIsGLProgrammableRenderer()) { glFour(); } else { glTwo(); }
+			string shaderName = "ftBridgeShader";
+			if (bInitialized) { ofLogVerbose(shaderName + " initialized"); }
+			else { ofLogWarning(shaderName + " failed to initialize"); }
 		}
 		
 	protected:
@@ -30,6 +28,7 @@ namespace flowTools {
 										 vec2 blendVel = texture2DRect(tex1, gl_TexCoord[0].st).xy;
 										 vec2 vel = (baseVel * weight) + blendVel;
 										 float magnitude = min(length(vel), 1);
+										 vel += TINY;
 										 vel = normalize(vel) * magnitude;
 										 gl_FragColor = vec4(vel, 0.0, 1.0);
 									 }
@@ -37,12 +36,10 @@ namespace flowTools {
 			
 			bInitialized *= setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
 			bInitialized *= linkProgram();
-			
 		}
 		
-		void glThree() {
-			
-			fragmentShader = GLSL150(
+		void glFour() {
+			fragmentShader = GLSL410(
 									 uniform sampler2DRect tex0;
 									 uniform sampler2DRect tex1;
 									 uniform float weight;
@@ -55,6 +52,7 @@ namespace flowTools {
 										 vec2 blendVel = texture(tex1, texCoordVarying).xy;
 										 vec2 vel = (baseVel * weight) + blendVel;
 										 float magnitude = min(length(vel), 1);
+										 vel += TINY;
 										 vel = normalize(vel) * magnitude;
 										 fragColor = vec4(vel, 0.0, 1.0);
 									 }
@@ -64,7 +62,6 @@ namespace flowTools {
 			bInitialized *= setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
 			bInitialized *= bindDefaults();
 			bInitialized *= linkProgram();
-			
 		}
 		
 	public:
@@ -80,3 +77,5 @@ namespace flowTools {
 		}
 	};
 }
+
+

@@ -10,12 +10,10 @@ namespace flowTools {
 	public:
 		ftHSLShader(){
             bInitialized = 1;
-            if (ofIsGLProgrammableRenderer()) { glThree(); } else { glTwo(); }
-			
-			if (bInitialized)
-				ofLogVerbose("ftHSLShader initialized");
-			else
-				ofLogWarning("ftHSLShader failed to initialize");
+			if (ofIsGLProgrammableRenderer()) { glFour(); } else { glTwo(); }
+			string shaderName = "ftHSLShader";
+			if (bInitialized) { ofLogVerbose(shaderName + " initialized"); }
+			else { ofLogWarning(shaderName + " failed to initialize"); }
 		}
 		
 	protected:
@@ -111,13 +109,12 @@ namespace flowTools {
 									 }
 									 );
 			
-			bInitialized *= shader.setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
-			bInitialized *= shader.linkProgram();
-
+			bInitialized *= setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
+			bInitialized *= linkProgram();
 		}
 		
-		void glThree() {
-			fragmentShader = GLSL150(
+		void glFour() {
+			fragmentShader = GLSL410(
 									 uniform sampler2DRect tex0;
 									 uniform float hue;
 									 uniform float saturation;
@@ -211,26 +208,26 @@ namespace flowTools {
 									 }
 									 );
 			
-			bInitialized *= shader.setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
-			bInitialized *= shader.setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
-			bInitialized *= shader.bindDefaults();
-			bInitialized *= shader.linkProgram();
+			bInitialized *= setupShaderFromSource(GL_VERTEX_SHADER, vertexShader);
+			bInitialized *= setupShaderFromSource(GL_FRAGMENT_SHADER, fragmentShader);
+			bInitialized *= bindDefaults();
+			bInitialized *= linkProgram();
 		}
 		
 	public:
-		
-		
 		void update(ofFbo& _drawBuffer, ofTexture& _srcTex, float _hue, float _saturation, float _lightness){
 			_drawBuffer.begin();
-			shader.begin();
-			shader.setUniformTexture( "tex0" , _srcTex, 0 );
-			shader.setUniform1f("hue", _hue );
-			shader.setUniform1f("saturation", _saturation);
-			shader.setUniform1f("lightness", _lightness);
+			begin();
+			setUniformTexture( "tex0" , _srcTex, 0 );
+			setUniform1f("hue", _hue );
+			setUniform1f("saturation", _saturation);
+			setUniform1f("lightness", _lightness);
 			renderFrame(_drawBuffer.getWidth(), _drawBuffer.getHeight());
-			shader.end();
+			end();
 			_drawBuffer.end();
 		}
 		
 	};
 }
+
+

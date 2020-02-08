@@ -2,26 +2,28 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-	
-//	ofSetVerticalSync(false);
+	ofSetVerticalSync(true);
 	ofSetLogLevel(OF_LOG_NOTICE);
 	
 	densityWidth = 1280;
 	densityHeight = 720;
-	// process all but the density on 16th resolution
-	flowWidth = densityWidth / 4;
-	flowHeight = densityHeight / 4;
+	simulationWidth = densityWidth / 2;
+	simulationHeight = densityHeight / 2;
 	windowWidth = ofGetWindowWidth();
 	windowHeight = ofGetWindowHeight();
 	
-	opticalFlow.setup(flowWidth, flowHeight);
-	velocityBridgeFlow.setup(flowWidth, flowHeight);
-	densityBridgeFlow.setup(flowWidth, flowHeight, densityWidth, densityHeight);
-	fluidFlow.setup(flowWidth, flowHeight, densityWidth, densityHeight);
+	opticalFlow.setup(simulationWidth, simulationHeight);
+//	velocityBridgeFlow.setup(simulationWidth, simulationHeight);
+//	densityBridgeFlow.setup(simulationWidth, simulationHeight, densityWidth, densityHeight);
+//	temperatureBridgeFlow.setup(simulationWidth, simulationHeight);
+	combinedBridgeFlow.setup(simulationWidth, simulationHeight, densityWidth, densityHeight);
+	fluidFlow.setup(simulationWidth, simulationHeight, densityWidth, densityHeight);
 	
 	flows.push_back(&opticalFlow);
-	flows.push_back(&velocityBridgeFlow);
-	flows.push_back(&densityBridgeFlow);
+//	flows.push_back(&velocityBridgeFlow);
+//	flows.push_back(&densityBridgeFlow);
+//	flows.push_back(&temperatureBridgeFlow);
+	flows.push_back(&combinedBridgeFlow);
 	flows.push_back(&fluidFlow);
 	
 	flowToolsLogo.load("flowtools.png");
@@ -50,6 +52,13 @@ void ofApp::setupGui() {
 	gui.add(toggleCameraDraw.set("draw camera (C)", true));
 	gui.add(toggleReset.set("reset (R)", false));
 	toggleReset.addListener(this, &ofApp::toggleResetListener);
+	gui.add(outputWidth.set("output width", 1280, 256, 1920));
+	gui.add(outputHeight.set("output height", 720, 144, 1080));
+	gui.add(simulationScale.set("simulation scale", 2, 1, 4));
+	gui.add(simulationFPS.set("simulation fps", 60, 1, 60));
+	outputWidth.addListener(this, &ofApp::simulationResolutionListener);
+	outputHeight.addListener(this, &ofApp::simulationResolutionListener);
+	simulationScale.addListener(this, &ofApp::simulationResolutionListener);
 	
 	visualizationParameters.setName("visualization");
 	visualizationParameters.add(visualizationMode.set("mode", FLUID_DEN, INPUT_FOR_DEN, FLUID_DEN));
@@ -90,6 +99,7 @@ void ofApp::switchGuiColor(bool _switch) {
 
 //--------------------------------------------------------------
 void ofApp::update(){
+	ofSetFrameRate(simulationFPS);
 	float dt = 1.0 / max(ofGetFrameRate(), 1.f); // more smooth as 'real' deltaTime.
 	
 	simpleCam.update();
@@ -103,15 +113,22 @@ void ofApp::update(){
 	
 	opticalFlow.update();
 	
-	velocityBridgeFlow.setInput(opticalFlow.getVelocity());
-	velocityBridgeFlow.update(dt);
-	densityBridgeFlow.setDensity(cameraFbo.getTexture());
-	densityBridgeFlow.setVelocity(opticalFlow.getVelocity());
-	densityBridgeFlow.update(dt);
+	combinedBridgeFlow.setVelocity(opticalFlow.getVelocity());
+	combinedBridgeFlow.setDensity(cameraFbo.getTexture());
+	combinedBridgeFlow.update(dt);
 	
-	fluidFlow.addVelocity(velocityBridgeFlow.getVelocity());
-	fluidFlow.addDensity(densityBridgeFlow.getDensity());
-	fluidFlow.addTemperature(densityBridgeFlow.getLuminance());
+//	velocityBridgeFlow.setVelocity(opticalFlow.getVelocity());
+//	velocityBridgeFlow.update(dt);
+//	densityBridgeFlow.setDensity(cameraFbo.getTexture());
+//	densityBridgeFlow.setVelocity(opticalFlow.getVelocity());
+//	densityBridgeFlow.update(dt);
+//	temperatureBridgeFlow.setDensity(cameraFbo.getTexture());
+//	temperatureBridgeFlow.setVelocity(opticalFlow.getVelocity());
+//	temperatureBridgeFlow.update(dt);
+	
+	fluidFlow.addVelocity(combinedBridgeFlow.getVelocity());
+	fluidFlow.addDensity(combinedBridgeFlow.getDensity());
+	fluidFlow.addTemperature(combinedBridgeFlow.getTemperature());
 	fluidFlow.update(dt);
 }
 
@@ -128,16 +145,17 @@ void ofApp::draw(){
 	
 	ofEnableBlendMode(OF_BLENDMODE_ALPHA);
 	switch(visualizationMode.get()) {
-		case INPUT_FOR_DEN:	densityBridgeFlow.drawInput(0, 0, windowWidth, windowHeight); break;
-		case INPUT_FOR_VEL: opticalFlow.drawInput(0, 0, windowWidth, windowHeight); break;
+		case INPUT_FOR_DEN:	combinedBridgeFlow.drawInput(0, 0, windowWidth, windowHeight); break;
+		case INPUT_FOR_VEL:	opticalFlow.drawInput(0, 0, windowWidth, windowHeight); break;
 		case FLOW_VEL:		opticalFlow.draw(0, 0, windowWidth, windowHeight); break;
-		case BRIDGE_VEL:	velocityBridgeFlow.draw(0, 0, windowWidth, windowHeight); break;
-		case BRIDGE_DEN:	densityBridgeFlow.draw(0, 0, windowWidth, windowHeight); break;
-		case BRIDGE_TMP:	break;
+		case BRIDGE_VEL:	combinedBridgeFlow.drawVelocity(0, 0, windowWidth, windowHeight); break;
+		case BRIDGE_DEN:	combinedBridgeFlow.drawDensity(0, 0, windowWidth, windowHeight); break;
+		case BRIDGE_TMP:	combinedBridgeFlow.drawTemperature(0, 0, windowWidth, windowHeight); break;
 		case BRIDGE_PRS:	break;
 		case OBSTACLE:		fluidFlow.drawObstacle(0, 0, windowWidth, windowHeight); break;
+		case OBST_OFFSET:	fluidFlow.drawObstacleOffset(0, 0, windowWidth, windowHeight); break;
 		case FLUID_BUOY:	fluidFlow.drawBuoyancy(0, 0, windowWidth, windowHeight); break;
-		case FLUID_VORT:	fluidFlow.drawVorticityVelocity(0, 0, windowWidth, windowHeight); break;
+		case FLUID_VORT:	fluidFlow.drawVorticity(0, 0, windowWidth, windowHeight); break;
 		case FLUID_DIVE:	fluidFlow.drawDivergence(0, 0, windowWidth, windowHeight); break;
 		case FLUID_TMP:		fluidFlow.drawTemperature(0, 0, windowWidth, windowHeight); break;
 		case FLUID_PRS:		fluidFlow.drawPressure(0, 0, windowWidth, windowHeight); break;
@@ -147,7 +165,7 @@ void ofApp::draw(){
 	}
 	
 	ofEnableBlendMode(OF_BLENDMODE_SUBTRACT);
-	flowToolsLogo.draw(0, 0, windowWidth, windowHeight);
+//	flowToolsLogo.draw(0, 0, windowWidth, windowHeight);
 	
 	if (toggleGuiDraw) {
 		ofEnableBlendMode(OF_BLENDMODE_ALPHA);
@@ -169,7 +187,7 @@ void ofApp::drawGui() {
 		deltaTimeDeque.pop_front();
 	
 	float longestTime = 0;
-	for (int i=0; i<deltaTimeDeque.size(); i++){
+	for (int i=0; i<(int)deltaTimeDeque.size(); i++){
 		if (deltaTimeDeque[i] > longestTime)
 			longestTime = deltaTimeDeque[i];
 	}
@@ -210,5 +228,18 @@ void ofApp::toggleResetListener(bool& _value) {
 		fluidFlow.addObstacle(flowToolsLogo.getTexture());
 	}
 	_value = false;
+}
+
+void ofApp::simulationResolutionListener(int &_value){
+	densityWidth = outputWidth;
+	densityHeight = outputHeight;
+	simulationWidth = densityWidth / simulationScale;
+	simulationHeight = densityHeight / simulationScale;
+	
+	opticalFlow.resize(simulationWidth, simulationHeight);
+	combinedBridgeFlow.resize(simulationWidth, simulationHeight, densityWidth, densityHeight);
+	
+	fluidFlow.resize(simulationWidth, simulationHeight, densityWidth, densityHeight);
+	fluidFlow.addObstacle(flowToolsLogo.getTexture());
 }
 
