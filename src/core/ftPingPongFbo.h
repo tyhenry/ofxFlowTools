@@ -22,12 +22,13 @@ namespace flowTools {
 #else
             settings.useDepth        = true;
             settings.useStencil        = true;
-            settings.textureTarget    = ofGetUsingArbTex() ? GL_TEXTURE_RECTANGLE_ARB : GL_TEXTURE_2D;
+            settings.textureTarget    = GL_TEXTURE_RECTANGLE_ARB;  // ensure arb tex
 #endif
             allocate(settings);
         }
         
         void allocate(ofFboSettings _settings){
+            _settings.textureTarget    = GL_TEXTURE_RECTANGLE_ARB;  // ensure arb tex
             fbos[0].allocate(_settings);
             fbos[1].allocate(_settings);
             flag = false;

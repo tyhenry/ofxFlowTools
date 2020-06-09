@@ -61,8 +61,14 @@ namespace flowTools {
 			ofEnableBlendMode(OF_BLENDMODE_DISABLED);
 			ftUtil::zero(inputFbo.get());
 			if (_tex.getTextureData().glInternalFormat != GL_R8) {
-				RGB2LumShader.update(inputFbo.get(), _tex); }
-			else {
+				// check for required GL_TEXTURE_RECTANGLE texture target and report / abort if not
+				const auto texTarget = _tex.getTextureData().textureTarget;
+				if (texTarget == GL_TEXTURE_RECTANGLE) {
+					RGB2LumShader.update(inputFbo.get(), _tex); 
+				} else {
+					ofLogError( "ofxFlowTools" ) << "[ " << typeid(*this).name() << "::setInput ] requires input texture to use textureTarget: GL_TEXTURE_RECTANGLE, but texture is using: " << (texTarget == GL_TEXTURE_2D ? "GL_TEXTURE_2D" : ofToString(texTarget));
+				}
+			} else {
 				ftUtil::stretch(inputFbo.get(), _tex);
 			}
 			bInputSet = true;
@@ -73,8 +79,14 @@ namespace flowTools {
 		void addInput(ofTexture& _tex , float _strength = 1.0) override {
 			inputFbo.swap();
 			if (_tex.getTextureData().glInternalFormat != GL_R8) {
-				RGB2LumShader.update(RGB2LumFbo, _tex);
-				addMultipliedShader.update(inputFbo.get(), inputFbo.getBackTexture(), RGB2LumFbo.getTexture(), 1.0, _strength);
+				// check for required GL_TEXTURE_RECTANGLE texture target and report / abort if not
+				const auto texTarget = _tex.getTextureData().textureTarget;
+				if (texTarget == GL_TEXTURE_RECTANGLE) {
+					RGB2LumShader.update(RGB2LumFbo, _tex);
+					addMultipliedShader.update(inputFbo.get(), inputFbo.getBackTexture(), RGB2LumFbo.getTexture(), 1.0, _strength);
+				} else {
+					ofLogError( "ofxFlowTools" ) << "[ " << typeid(*this).name() << "::addInput ] requires input texture to use textureTarget: GL_TEXTURE_RECTANGLE, but texture is using: " << (texTarget == GL_TEXTURE_2D ? "GL_TEXTURE_2D" : ofToString(texTarget));
+				}
 			} else {
 				addMultipliedShader.update(inputFbo.get(), inputFbo.getBackTexture(), _tex, 1.0, _strength);
 			}

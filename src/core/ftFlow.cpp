@@ -31,6 +31,12 @@ namespace flowTools {
 	}
 	
 	void ftFlow::add(ftPingPongFbo &_dstFbo, ofTexture &_srcTex, float _strength) {
+		// check for required GL_TEXTURE_RECTANGLE texture target and report / abort if not
+		const auto texTarget = _srcTex.getTextureData().textureTarget;
+		if (texTarget != GL_TEXTURE_RECTANGLE) {
+			ofLogError( "ofxFlowTools" ) << "[ " << typeid(*this).name() << "::add ] requires input texture to use textureTarget: GL_TEXTURE_RECTANGLE, but texture is using: " << (texTarget == GL_TEXTURE_2D ? "GL_TEXTURE_2D" : ofToString(texTarget));
+			return;
+		}
 		ofPushStyle();
 		ofEnableBlendMode(OF_BLENDMODE_DISABLED);
 		_dstFbo.swap();
