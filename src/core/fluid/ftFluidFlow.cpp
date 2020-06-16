@@ -227,6 +227,7 @@ namespace flowTools {
 		ofPushStyle();
 		ofEnableBlendMode(OF_BLENDMODE_DISABLED);
 		initObstacle();
+		obstacleFbo.swap();
 		addBooleanShader.update(obstacleFbo.get(), obstacleFbo.getBackTexture(), _tex);
 		obstacleOffsetShader.update(obstacleOffsetFbo, obstacleFbo.getTexture());
 		ofPopStyle();

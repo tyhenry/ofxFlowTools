@@ -57,6 +57,9 @@ namespace flowTools {
 		numParticles = (numParticlesX * numParticlesY);
 		simulationWidth = _simulationWidth;
 		
+		bool hadArbTex = ofGetUsingArbTex();
+		ofEnableArbTex();
+
 		ofPushStyle();
 		ofEnableBlendMode(OF_BLENDMODE_DISABLED);  // Why?
 		
@@ -94,6 +97,8 @@ namespace flowTools {
 		}
 		
 		ofPopStyle();
+
+		if (!hadArbTex) ofDisableArbTex();
 		
 	}
 	
